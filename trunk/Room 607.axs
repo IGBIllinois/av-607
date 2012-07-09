@@ -1,4 +1,4 @@
-PROGRAM_NAME='Training Lab 606'
+PROGRAM_NAME='Room 607'
 (***********************************************************)
 (* System Type : NetLinx                                   *)
 (***********************************************************)
@@ -15,9 +15,7 @@ dvAudia1 = 5001:1:3	//Biamp Nexia CS		(A)<--Ref on DWG
 dvProjA  = 5001:2:3	//Proxima C450 Right side as looking at Screen (B)
 dvProjB  = 5001:3:3	//Proxima C450 Left side as looking at Screen (C)
 dvScaler = 5001:4:3	//Extron DVS304 Video Scaler	(D)
-DvCombo	 = 5001:9:3	//VCR/DVD Combo
 dvTp     = 10006:1:3	//MVP8400 Touchpanel	
-dvTpVcr_Dvd = 10006:2:3	//Port 2 for VCR and DVD control
 Relay = 5001:8:3	//Relay used for Power Strip
 (***********************************************************)
 (*               CONSTANT DEFINITIONS GO BELOW             *)
@@ -76,19 +74,7 @@ DEFINE_TYPE
 (*               VARIABLE DEFINITIONS GO BELOW             *)
 (***********************************************************)
 DEFINE_VARIABLE
-INTEGER nBtnDVDMisc[] = 
-{
-    20,
-    21,
-    22,
-    23,
-    24,
-    25,
-    26,
-    27,
-    28,
-    29
-}
+
 integer nCurrentSource
 integer RightProjPwrStatus
 integer LeftProjPwrStatus
@@ -133,7 +119,7 @@ DEFINE_CALL 'Proj Power'(integer Proj_Num, char Proj_Control[10]) //Projector Co
 		{
 		    IF(PROJ_POWER1 = 0)
 		    {
-			SEND_STRING dvProjA,'(PWR1)'
+			SEND_STRING dvProjA,'PWR ON',$0D"
 			WAIT 25
 			{
 			    RUN1 = 1
@@ -144,7 +130,7 @@ DEFINE_CALL 'Proj Power'(integer Proj_Num, char Proj_Control[10]) //Projector Co
 		{
 		    IF(PROJ_POWER1 = 1)
 		    {
-			SEND_STRING dvProjA,'(PWR0)'
+			SEND_STRING dvProjA,"'PWR OFF',$0D"
 			RUN1 = 0
 		    }
 		}
@@ -158,7 +144,7 @@ DEFINE_CALL 'Proj Power'(integer Proj_Num, char Proj_Control[10]) //Projector Co
 		{
 		    IF(PROJ_POWER2 = 0)
 		    {
-			SEND_STRING dvProjB,'(PWR1)'
+			SEND_STRING dvProjB,'PWR ON',$0D"
 			WAIT 25
 			{
 			    RUN2 = 1
@@ -169,7 +155,7 @@ DEFINE_CALL 'Proj Power'(integer Proj_Num, char Proj_Control[10]) //Projector Co
 		{
 		    IF(PROJ_POWER2 = 1)
 		    {
-			SEND_STRING dvProjB,'(PWR0)'
+			SEND_STRING dvProjB,"'PWR OFF',$0D"
 			RUN2 = 0
 		    }
 		}
@@ -183,7 +169,7 @@ DEFINE_CALL 'Proj Power'(integer Proj_Num, char Proj_Control[10]) //Projector Co
 		{
 		    IF(PROJ_POWER1 = 0)
 		    {
-			SEND_STRING dvProjA,'(PWR1)'
+			SEND_STRING dvProjA,'PWR ON',$0D"
 			WAIT 25
 			{
 			    RUN1 = 1
@@ -191,7 +177,7 @@ DEFINE_CALL 'Proj Power'(integer Proj_Num, char Proj_Control[10]) //Projector Co
 		    }
 		    IF(PROJ_POWER2 = 0)
 		    {
-			SEND_STRING dvProjB,'(PWR1)'
+			SEND_STRING dvProjB,'PWR ON',$0D"
 			WAIT 25
 			{
 			    RUN2 = 1
@@ -201,8 +187,8 @@ DEFINE_CALL 'Proj Power'(integer Proj_Num, char Proj_Control[10]) //Projector Co
 		ACTIVE(Proj_Control = 'POF'):
 		{
 		    
-		    SEND_STRING dvProjB,'(PWR0)'
-		    SEND_STRING dvProjA,'(PWR0)'
+		    SEND_STRING dvProjB,"'PWR OFF',$0D"
+		    SEND_STRING dvProjA,"'PWR OFF',$0D"
 		    RUN1 = 0
 		    RUN2 = 0
 		}
@@ -275,7 +261,6 @@ DEFINE_CALL 'System Off'
 {
     Call 'Proj Power'(3,'POF')
     off[Relay,PowerRelay]
-    PULSE[DvCombo,2]	//Stop VCR/DVD.
     AUDIA_SetVolumeFn (1, AUDIA_VOL_MUTE)
     AUDIA_MatchVolumeLvl (2,1)      // Example: If this was a stereo pair
     AUDIA_MatchVolumeLvl (3,1)      // Example: If this was a stereo pair
@@ -319,7 +304,7 @@ DATA_EVENT[dvProjA]
 {
     Online:
     {
-	SEND_COMMAND data.device,"'SET BAUD 19200,8,N,1'" //Baud Rate of the Proj
+	SEND_COMMAND data.device,"'SET BAUD 9600,8,N,1'" //Baud Rate of the Proj
 	PROJ_POWER1 = 0
 	
     }
@@ -345,7 +330,7 @@ DATA_EVENT[dvProjB]
 {
     Online:
     {
-	SEND_COMMAND data.device,"'SET BAUD 19200,8,N,1'" //Baud Rate of the Proj
+	SEND_COMMAND data.device,"'SET BAUD 96,8,N,1'" //Baud Rate of the Proj
 	PROJ_POWER2 = 0
     }
      STRING:
@@ -395,53 +380,6 @@ BUTTON_EVENT[dvTp,nSrcSelects]
 	}
     }
 }
-button_event[dvTP,nBtnDVDMisc]	
-{				
-    push:
-    {
-	STACK_VAR integer nDvdIrChan
-	to[dvTp,button.input.channel]
-       switch(get_last(nBtnDVDMisc))
-	{
-	    case 1: //Up Arrow
-	    {	 
-		nDvdIrChan = 45
-	    }
-	    case 2: //Down Arrow
-	    {	 
-		nDvdIrChan = 46
-	    }
-	    case 3: //Left Arrow
-	    {	 
-		nDvdIrChan = 47
-	    }
-	    case 4: //Right Arrow
-	    {	 
-		nDvdIrChan = 48
-	    }
-	    case 5: //Enter
-	    {	 
-		nDvdIrChan = 49
-	    }
-	    case 6: //Menu
-	    {	 
-		nDvdIrChan = 44
-	    }
-	    case 7: //Main
-	    {	 
-		nDvdIrChan = 54
-	    }
-	    case 8:  //Display
-	    {	 
-		nDvdIrChan = 58
-	    } 
-	    case 9:  //Return
-	    {	 
-		nDvdIrChan = 54
-	    } 
-	}
-    }
-}
 
 BUTTON_EVENT[dvTp,nBtnDest]	//Select Left or Right Proj
 {
@@ -463,14 +401,14 @@ BUTTON_EVENT[dvTp,nBtnDest]	//Select Left or Right Proj
 			CASE nDvd:
 			{
 			    Call 'Scaler'(2,1)
-			    Call 'Proj Control'(nLeft,'RGB1')
+			    //Call 'Proj Control'(nLeft,'RGB1')
 			    Pulse[DvCombo,114]	//Select the DVD Side of Combo Deck
 			    //Need to call the Nexia for audio
 			}
 			Case nVCR:
 			{
 			    Call 'Scaler'(1,1)
-			    Call 'Proj Control'(nLeft,'RGB1')
+			    //Call 'Proj Control'(nLeft,'RGB1')
 			    Pulse[DvCombo,113]	//Select the VCR Side of Combo Deck
 			    //Need to call the Nexia for audio
 			}
@@ -495,13 +433,13 @@ BUTTON_EVENT[dvTp,nBtnDest]	//Select Left or Right Proj
 			CASE nDvd:
 			{
 			    Call 'Scaler'(2,1)
-			    Call 'Proj Control'(nRight,'RGB1')
+			    //Call 'Proj Control'(nRight,'RGB1')
 			    Pulse[DvCombo,114]	//Select the DVD Side of Combo Deck
 			}
 			Case nVCR:
 			{
 			    Call 'Scaler'(1,1)
-			    Call 'Proj Control'(nRight,'RGB1')
+			    //Call 'Proj Control'(nRight,'RGB1')
 			    Pulse[DvCombo,113]	//Select the VCR Side of Combo Deck
 			}
 			Case nPC:
@@ -756,8 +694,7 @@ If((time_to_hour(time) = 21)&&(time_to_minute(time) = 00)&&(nTimeBlock = 0))
     wait 620			//Need to wait until the minute is over.
 	nTimeBlock = 0	
 }
-SYSTEM_CALL 'VCR1'(DvCombo,dvTpVcr_Dvd,1,2,3,4,5,6,7,0,0)
-SYSTEM_CALL 'DVD1'(dvCombo,dvTpVcr_Dvd,11,12,13,14,15,16,17,0)
+
 SEND_LEVEL dvTp,1,AUDIA_GetBgLvl(1)
 SEND_LEVEL dvTp,2,AUDIA_GetBgLvl(2) 
 [dvTp,214] = (uAudiaVol[1].nVolRamp = AUDIA_VOL_UP)
