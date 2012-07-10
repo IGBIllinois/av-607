@@ -116,11 +116,11 @@
 <SalesOrder></SalesOrder>
 <PurchaseOrder></PurchaseOrder>
 <Comments></Comments>
-<System IsActive="true" Platform="Netlinx" Transport="Serial"><Identifier>Room 607</Identifier>
-<SysID>0</SysID>
+<System IsActive="true" Platform="Netlinx" Transport="TCPIP"><Identifier>Room 607</Identifier>
+<SysID>3</SysID>
 <TransSerial>COM1,115200,8,None,1,None</TransSerial>
 <TransModem>COM1,38400,8,None,1,None</TransModem>
-<TransTCPIP>192.168.1.10:1319:1:USI</TransTCPIP>
+<TransTCPIP>192.168.1.113:1319:1:607AV::</TransTCPIP>
 <VirtualNetLinxMasterFlag>0</VirtualNetLinxMasterFlag>
 <VNMRestoreIPSettings>0.0.0.0:1319:1</VNMRestoreIPSettings>
 <VNMSystemID>1</VNMSystemID>
@@ -142,13 +142,15 @@
 <FilePathName>Include\nAMX_QUEUE.axi</FilePathName>
 <Comments></Comments>
 </File>
-<File CompileType="Netlinx" Type="Source"><Identifier>Room 607</Identifier>
+<File CompileType="Netlinx" Type="MasterSrc"><Identifier>Room 607</Identifier>
 <FilePathName>Room 607.axs</FilePathName>
 <Comments></Comments>
 </File>
 <File CompileType="None" Type="TP4"><Identifier>Room 607</Identifier>
 <FilePathName>Room 607.TP4</FilePathName>
 <Comments></Comments>
+<DeviceMap DevAddr="dvTp"><DevName>dvTp</DevName>
+</DeviceMap>
 </File>
 </System>
 </Project>
