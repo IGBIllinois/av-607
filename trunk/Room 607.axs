@@ -119,7 +119,7 @@ DEFINE_CALL 'Proj Power'(integer Proj_Num, char Proj_Control[10]) //Projector Co
 		{
 		    IF(PROJ_POWER1 = 0)
 		    {
-			SEND_STRING dvProjA,'PWR ON',$0D"
+			SEND_STRING dvProjA,"'PWR ON',$0D"
 			WAIT 25
 			{
 			    RUN1 = 1
@@ -144,7 +144,7 @@ DEFINE_CALL 'Proj Power'(integer Proj_Num, char Proj_Control[10]) //Projector Co
 		{
 		    IF(PROJ_POWER2 = 0)
 		    {
-			SEND_STRING dvProjB,'PWR ON',$0D"
+			SEND_STRING dvProjB,"'PWR ON',$0D"
 			WAIT 25
 			{
 			    RUN2 = 1
@@ -169,7 +169,7 @@ DEFINE_CALL 'Proj Power'(integer Proj_Num, char Proj_Control[10]) //Projector Co
 		{
 		    IF(PROJ_POWER1 = 0)
 		    {
-			SEND_STRING dvProjA,'PWR ON',$0D"
+			SEND_STRING dvProjA,"'PWR ON',$0D"
 			WAIT 25
 			{
 			    RUN1 = 1
@@ -177,7 +177,7 @@ DEFINE_CALL 'Proj Power'(integer Proj_Num, char Proj_Control[10]) //Projector Co
 		    }
 		    IF(PROJ_POWER2 = 0)
 		    {
-			SEND_STRING dvProjB,'PWR ON',$0D"
+			SEND_STRING dvProjB,"'PWR ON',$0D"
 			WAIT 25
 			{
 			    RUN2 = 1
@@ -402,14 +402,14 @@ BUTTON_EVENT[dvTp,nBtnDest]	//Select Left or Right Proj
 			{
 			    Call 'Scaler'(2,1)
 			    //Call 'Proj Control'(nLeft,'RGB1')
-			    Pulse[DvCombo,114]	//Select the DVD Side of Combo Deck
+			    
 			    //Need to call the Nexia for audio
 			}
 			Case nVCR:
 			{
 			    Call 'Scaler'(1,1)
 			    //Call 'Proj Control'(nLeft,'RGB1')
-			    Pulse[DvCombo,113]	//Select the VCR Side of Combo Deck
+			    
 			    //Need to call the Nexia for audio
 			}
 			Case nPC:
@@ -434,13 +434,13 @@ BUTTON_EVENT[dvTp,nBtnDest]	//Select Left or Right Proj
 			{
 			    Call 'Scaler'(2,1)
 			    //Call 'Proj Control'(nRight,'RGB1')
-			    Pulse[DvCombo,114]	//Select the DVD Side of Combo Deck
+			    
 			}
 			Case nVCR:
 			{
 			    Call 'Scaler'(1,1)
 			    //Call 'Proj Control'(nRight,'RGB1')
-			    Pulse[DvCombo,113]	//Select the VCR Side of Combo Deck
+			   
 			}
 			Case nPC:
 			{
@@ -467,13 +467,13 @@ BUTTON_EVENT[dvTp,nBtnDest]	//Select Left or Right Proj
 			{
 			    Call 'Scaler'(2,1)
 			    Call 'Proj Control'(3,'RGB1')
-			    Pulse[DvCombo,114]	//Select the DVD Side of Combo Deck
+			    
 			}
 			Case nVCR:
 			{
 			    Call 'Scaler'(1,1)
 			    Call 'Proj Control'(3,'RGB1')
-			    Pulse[DvCombo,113]	//Select the VCR Side of Combo Deck
+			    
 			}
 			Case nPC:
 			{
