@@ -14,7 +14,6 @@ DEFINE_DEVICE
 dvAudia1 = 5001:1:3	//Biamp Nexia CS		(A)<--Ref on DWG
 dvProjA  = 5001:2:3	//Proxima C450 Right side as looking at Screen (B)
 dvProjB  = 5001:3:3	//Proxima C450 Left side as looking at Screen (C)
-dvScaler = 5001:4:3	//Extron DVS304 Video Scaler	(D)
 dvTp     = 10006:1:3	//MVP8400 Touchpanel	
 Relay = 5001:8:3	//Relay used for Power Strip
 (***********************************************************)
@@ -23,7 +22,7 @@ Relay = 5001:8:3	//Relay used for Power Strip
 DEFINE_CONSTANT
 integer nLeft = 1	//Used for selecting Left Proj
 integer nRight = 2	//Used for selecting Right Proj
-integer nDvd = 1
+integer nCam = 1
 integer nVCR = 2
 integer nPC = 3
 integer PowerRelay = 1
@@ -34,8 +33,7 @@ integer nRgbPortBtn[]=	//For selecting the RGB floor jacks
 }
 INTEGER nSrcSelects[] = 
 {
-    91,	//DVD
-    92,	//VCR
+    91,	//612 Camera
     93	//Laptop
 }
 integer nBtnDest[] = 
@@ -45,21 +43,30 @@ integer nBtnDest[] =
     3	//Both Projectors
     
 }
-integer nBtnRightProjAdvance[] = 
+/*integer nBtnRightProjAdvance[] = 
 {
-    94,		//Proj Power ON
-    95,		//Proj Power Off
-    96,		//VCR Input
-    97,		//DVD Input
-    98		//PC Input
-}
-integer nBtnLeftProjAdvance[] = 
+    101,	//Proj Power ON
+    102		//Proj Power Off
+    //96,	//VCR Input
+    //97,	//DVD Input
+    //98	//PC Input
+}*/
+/*integer nBtnLeftProjAdvance[] = 
 {
-    99,		//Proj Power ON
-    100,	//Proj Power Off
-    101,	//VCR Input
-    102,	//DVD Input
-    103		//PC Input
+    103,	//Proj Power ON
+    104		//Proj Power Off
+    //101,	//VCR Input
+    //102,	//DVD Input
+    //103	//PC Input
+}*/
+integer nProjAdvance[] =
+{
+    101,	//Right Projector On
+    102,	//Right Projector Off
+    103,	//Left Projector On
+    104		//Left Projector Off
+
+
 }
 integer nBtnPwrOff[] = 
 {
@@ -117,20 +124,16 @@ DEFINE_CALL 'Proj Power'(integer Proj_Num, char Proj_Control[10]) //Projector Co
 	    {
 		ACTIVE(Proj_Control = 'PON'):
 		{
-		    IF(PROJ_POWER1 = 0)
+		    SEND_STRING dvProjA,"'PWR ON',$0D"
+		    WAIT 25
 		    {
-			SEND_STRING dvProjA,"'PWR ON',$0D"
-			WAIT 25
-			{
-			    RUN1 = 1
-			}
+			RUN1 = 1
 		    }
 		}
 		ACTIVE(Proj_Control = 'POF'):
 		{
-		    IF(PROJ_POWER1 = 1)
-		    {
-			SEND_STRING dvProjA,"'PWR OFF',$0D"
+		    SEND_STRING dvProjA,"'PWR OFF',$0D"
+		    WAIT 25 {
 			RUN1 = 0
 		    }
 		}
@@ -142,58 +145,21 @@ DEFINE_CALL 'Proj Power'(integer Proj_Num, char Proj_Control[10]) //Projector Co
 	    {
 		ACTIVE(Proj_Control = 'PON'):
 		{
-		    IF(PROJ_POWER2 = 0)
-		    {
-			SEND_STRING dvProjB,"'PWR ON',$0D"
-			WAIT 25
-			{
-			    RUN2 = 1
-			}
+		    SEND_STRING dvProjB,"'PWR ON',$0D"
+		    WAIT 25 {
+			RUN2 = 1
 		    }
 		}
 		ACTIVE(Proj_Control = 'POF'):
 		{
-		    IF(PROJ_POWER2 = 1)
-		    {
-			SEND_STRING dvProjB,"'PWR OFF',$0D"
+		    SEND_STRING dvProjB,"'PWR OFF',$0D"
+		    WAIT 25 {
 			RUN2 = 0
 		    }
 		}
 	    }
 	}
-	ACTIVE(Proj_Num = 3):			//BOTH
-	{
-	    SELECT
-	    {
-		ACTIVE(Proj_Control = 'PON'):
-		{
-		    IF(PROJ_POWER1 = 0)
-		    {
-			SEND_STRING dvProjA,"'PWR ON',$0D"
-			WAIT 25
-			{
-			    RUN1 = 1
-			}
-		    }
-		    IF(PROJ_POWER2 = 0)
-		    {
-			SEND_STRING dvProjB,"'PWR ON',$0D"
-			WAIT 25
-			{
-			    RUN2 = 1
-			}
-		    }
-		}
-		ACTIVE(Proj_Control = 'POF'):
-		{
-		    
-		    SEND_STRING dvProjB,"'PWR OFF',$0D"
-		    SEND_STRING dvProjA,"'PWR OFF',$0D"
-		    RUN1 = 0
-		    RUN2 = 0
-		}
-	    }
-	}
+	
     }
 }
 
@@ -203,36 +169,15 @@ DEFINE_CALL 'Proj Control'(integer Proj_Num, char Proj_Control[10]) //Projector 
     DISPLAY = Proj_Num
     SELECT
     {
-	ACTIVE(Proj_Control = 'VID1'):
+	ACTIVE(Proj_Control = 'VGA'):
 	{
-	    //SEND_STRING dvProjB,'(SRC2)'
-	    CMD = '(SRC2)' 
+	    CMD = "'SOURCE 11',$0D"
 	}
-	ACTIVE(Proj_Control = 'VID2'):
+	ACTIVE(Proj_Control = 'BNC'): 
 	{
-	    //SEND_STRING dvProjB,'(SRC3)'
-	    CMD = '(SRC3)'
+	    CMD = "'SOURCE 45',$0D"
 	}
-	ACTIVE(Proj_Control = 'VID3'):
-	{
-	    //SEND_STRING dvProjB,'(SRC4)'
-	    CMD = '(SRC4)'
-	}
-	ACTIVE(Proj_Control = 'RGB1'):
-	{
-	    //SEND_STRING dvProjB,"'(SRC0)'"
-	    CMD = '(SRC0)'
-	}
-	ACTIVE(Proj_Control = 'RGB2'): 
-	{
-	    //SEND_STRING dvProjB,"'(SRC1)'"
-	    CMD = '(SRC1)'
-	}
-	ACTIVE(Proj_Control = 'RGB3'):
-	{
-	    //SEND_STRING dvProjB,"'(SRC5)'"
-	    CMD = '(SRC5)'
-	}
+	
     }
     SELECT
     {
@@ -252,14 +197,12 @@ DEFINE_CALL 'Proj Control'(integer Proj_Num, char Proj_Control[10]) //Projector 
     }
 }
 
-DEFINE_CALL 'Scaler'(integer nIn,integer nOut)
-{
-    send_string dvScaler,"itoa(nIn),'&'"	//Video Only
-    SEND_STRING 0:1:0,"'Scaler in = ',itoa(nIn),13"
-}
+
 DEFINE_CALL 'System Off'
 {
-    Call 'Proj Power'(3,'POF')
+    Call 'Proj Power'(1,'POF')
+    Call 'Proj Power'(2,'POF')
+    
     off[Relay,PowerRelay]
     AUDIA_SetVolumeFn (1, AUDIA_VOL_MUTE)
     AUDIA_MatchVolumeLvl (2,1)      // Example: If this was a stereo pair
@@ -330,7 +273,7 @@ DATA_EVENT[dvProjB]
 {
     Online:
     {
-	SEND_COMMAND data.device,"'SET BAUD 96,8,N,1'" //Baud Rate of the Proj
+	SEND_COMMAND data.device,"'SET BAUD 9600,8,N,1'" //Baud Rate of the Proj
 	PROJ_POWER2 = 0
     }
      STRING:
@@ -351,29 +294,20 @@ DATA_EVENT[dvProjB]
 	}
     }
 }
-DATA_EVENT[dvScaler]
-{
-    Online:
-    {
-	send_command dvScaler,"'SET BAUD 9600,8,N,1'"
-    }
-}
+
 BUTTON_EVENT[dvTp,nSrcSelects]
 {
     Push:
     {
-	On[Relay,PowerRelay]
+	
 	SWITCH(get_last(nSrcSelects))
 	{
 	    Case 1:
 	    {
-		nCurrentSource = nDvd
+		nCurrentSource = nCam
 	    }
+	    
 	    Case 2:
-	    {
-		nCurrentSource = nVCR
-	    }
-	    Case 3:
 	    {
 		nCurrentSource = nPC
 	    }
@@ -398,23 +332,17 @@ BUTTON_EVENT[dvTp,nBtnDest]	//Select Left or Right Proj
 		{
 		    SWITCH (nCurrentSource)
 		    {
-			CASE nDvd:
+			CASE nCam:
 			{
-			    Call 'Scaler'(2,1)
-			    //Call 'Proj Control'(nLeft,'RGB1')
+			    
+			    Call 'Proj Control'(nLeft,'VGA')
 			    
 			    //Need to call the Nexia for audio
 			}
-			Case nVCR:
-			{
-			    Call 'Scaler'(1,1)
-			    //Call 'Proj Control'(nLeft,'RGB1')
-			    
-			    //Need to call the Nexia for audio
-			}
+			
 			Case nPC:
 			{
-			    Call 'Proj Control'(nLeft,'RGB3')
+			    Call 'Proj Control'(nLeft,'BNC')
 			    //Need to call the Nexia for audio
 			}
 		    }
@@ -430,21 +358,16 @@ BUTTON_EVENT[dvTp,nBtnDest]	//Select Left or Right Proj
 		{
 		    SWITCH (nCurrentSource)
 		    {
-			CASE nDvd:
+			CASE nCam:
 			{
-			    Call 'Scaler'(2,1)
-			    //Call 'Proj Control'(nRight,'RGB1')
+			    Call 'Proj Control'(nRight,'VGA')
+			    
 			    
 			}
-			Case nVCR:
-			{
-			    Call 'Scaler'(1,1)
-			    //Call 'Proj Control'(nRight,'RGB1')
-			   
-			}
+			
 			Case nPC:
 			{
-			    Call 'Proj Control'(nRight,'RGB3')
+			    Call 'Proj Control'(nRight,'BNC')
 			}
 		    }
 		}
@@ -463,21 +386,15 @@ BUTTON_EVENT[dvTp,nBtnDest]	//Select Left or Right Proj
 		{
 		    SWITCH (nCurrentSource)
 		    {
-			CASE nDvd:
+			CASE nCam:
 			{
-			    Call 'Scaler'(2,1)
-			    Call 'Proj Control'(3,'RGB1')
+			    Call 'Proj Control'(3,'VGA')
 			    
 			}
-			Case nVCR:
-			{
-			    Call 'Scaler'(1,1)
-			    Call 'Proj Control'(3,'RGB1')
-			    
-			}
+			
 			Case nPC:
 			{
-			    Call 'Proj Control'(3,'RGB3')
+			    Call 'Proj Control'(3,'BNC')
 			}
 		    }
 		}
@@ -485,11 +402,38 @@ BUTTON_EVENT[dvTp,nBtnDest]	//Select Left or Right Proj
 	}
     }
 }
-BUTTON_EVENT[dvTp,nBtnLeftProjAdvance]	//99 - 103
+BUTTON_EVENT[dvTp,nProjAdvance]
 {
     Push:
     {
-	SEND_STRING 0:1:0,"'This button does not switch the Scaler',13,10"
+        switch (get_last(nProjAdvance))
+        {
+            Case 1:
+            {
+                Call 'Proj Power'(nRight,'PON')
+            }
+            Case 2:
+            {
+                Call 'Proj Power'(nRight,'POF')
+            }
+            Case 3:
+            {
+                Call 'Proj Power'(nLeft,'PON')
+            }
+            Case 4:
+            {
+                Call 'Proj Power'(nLeft,'POF')
+            }
+            
+        }
+    }
+}
+
+/*BUTTON_EVENT[dvTp,nBtnLeftProjAdvance]	//99 - 103
+{
+    Push:
+    {
+	//SEND_STRING 0:1:0,"'This button does not switch the Scaler',13,10"
 	SWITCH(get_last(nBtnLeftProjAdvance))
 	{
 	    Case 1:	//Power On
@@ -504,24 +448,24 @@ BUTTON_EVENT[dvTp,nBtnLeftProjAdvance]	//99 - 103
 	    }
 	    Case 3:	//VCR Input	
 	    {
-		Call 'Proj Control'(nLeft,'RGB1')
+		//Call 'Proj Control'(nLeft,'RGB1')
 	    }
 	    Case 4:	//DVD Input
 	    {
-		Call 'Proj Control'(nLeft,'RGB1')
+		//Call 'Proj Control'(nLeft,'RGB1')
 	    }
 	    Case 5:	//PC Input
 	    {	
-		Call 'Proj Control'(nLeft,'RGB2')
+		//Call 'Proj Control'(nLeft,'RGB2')
 	    }
 	}
     }
-}
-BUTTON_EVENT[dvTp,nBtnRightProjAdvance]	//94 - 98
+}*/
+/*BUTTON_EVENT[dvTp,nBtnRightProjAdvance]	//94 - 98
 {
     Push:
     {
-	SEND_STRING 0:1:0,"'This button does not switch the Scaler',13,10"
+	//SEND_STRING 0:1:0,"'This button does not switch the Scaler',13,10"
 	SWITCH(get_last(nBtnRightProjAdvance))
 	{
 	    Case 1:	//Power On
@@ -536,19 +480,19 @@ BUTTON_EVENT[dvTp,nBtnRightProjAdvance]	//94 - 98
 	    }
 	    Case 3:	//VCR Input	
 	    {
-		Call 'Proj Control'(nRight,'RGB1')
+		//Call 'Proj Control'(nRight,'RGB1')
 	    }
 	    Case 4:	//DVD Input
 	    {
-		Call 'Proj Control'(nRight,'RGB1')
+		//Call 'Proj Control'(nRight,'RGB1')
 	    }
 	    Case 5:	//PC Input
 	    {	
-		Call 'Proj Control'(nRight,'RGB2')
+		//Call 'Proj Control'(nRight,'RGB2')
 	    }
 	}
     }
-}
+}*/
 BUTTON_EVENT[dvTp,nBtnPwrOff]
 {
     Push:
@@ -684,7 +628,14 @@ BUTTON_EVENT[dvTp,216]        // Vol Mute
     AUDIA_MatchVolumeLvl (3,1)      // Example: If this was a stereo pair
   }
 }
-
+BUTTON_EVENT[dvTp,8]        //This is on the Splash page. Basically a big translucent button.
+{
+    Push:
+    {
+        On[Relay,PowerRelay]
+         
+    }
+}
 DEFINE_PROGRAM
 If((time_to_hour(time) = 21)&&(time_to_minute(time) = 00)&&(nTimeBlock = 0))
 {
