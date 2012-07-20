@@ -165,7 +165,7 @@ DEFINE_CALL 'Proj Power'(integer Proj_Num, char Proj_Control[10]) //Projector Co
 
 DEFINE_CALL 'Proj Control'(integer Proj_Num, char Proj_Control[10]) //Projector Control Sub.
 {
-    LOCAL_VAR CHAR CMD[10]
+    LOCAL_VAR CHAR CMD
     DISPLAY = Proj_Num
     SELECT
     {
@@ -175,7 +175,7 @@ DEFINE_CALL 'Proj Control'(integer Proj_Num, char Proj_Control[10]) //Projector 
 	}
 	ACTIVE(Proj_Control = 'BNC'): 
 	{
-	    CMD = "'SOURCE 45',$0D"
+	    CMD = "'SOURCE B1',$0D"
 	}
 	
     }
