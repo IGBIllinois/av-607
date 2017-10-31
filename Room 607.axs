@@ -14,6 +14,7 @@ DEFINE_DEVICE
 dvAudia1 = 5001:1:3	//Biamp Nexia CS		(A)<--Ref on DWG
 dvProjA  = 5001:2:3	//Proxima C450 Right side as looking at Screen (B)
 dvProjB  = 5001:3:3	//Proxima C450 Left side as looking at Screen (C)
+dvMatrix = 5001:4:3	//Extron Crosspoint 450 Plus Matrix Switcher
 dvTp     = 10006:1:3	//MVP8400 Touchpanel	
 Relay = 5001:8:3	//Relay used for Power Strip
 (***********************************************************)
@@ -43,35 +44,37 @@ integer nBtnDest[] =
     3	//Both Projectors
     
 }
-/*integer nBtnRightProjAdvance[] = 
-{
-    101,	//Proj Power ON
-    102		//Proj Power Off
-    //96,	//VCR Input
-    //97,	//DVD Input
-    //98	//PC Input
-}*/
-/*integer nBtnLeftProjAdvance[] = 
-{
-    103,	//Proj Power ON
-    104		//Proj Power Off
-    //101,	//VCR Input
-    //102,	//DVD Input
-    //103	//PC Input
-}*/
+
 integer nProjAdvance[] =
 {
-    101,	//Right Projector On
-    102,	//Right Projector Off
-    103,	//Left Projector On
-    104		//Left Projector Off
-
+    101,	//Left Projector PC
+    102,	//Left Projector Aux
+    103,	//Left Projector Overflow Presentation
+    104,	//Left Projector Overflow Camera
+    105,	//Left Projector Power Off
+    106,	//Right Projector PC
+    107,	//Right Projector Aux
+    108,	//Right Projector Overflow Presentation
+    109,	//Right Projector Overflow Camera
+    110		//Right Projector Power Off
 
 }
 integer nBtnPwrOff[] = 
 {
     4	//This is the YES button.
 }
+
+integer MxVinPC = 1
+integer MxVinAux = 2
+integer MxVin607A = 3
+integer MxVin607B = 4
+
+integer MxVoutLProj = 1
+integer MxVoutRProj = 2
+
+Char MxModeBoth[] = '!'
+Char MxModeVideo[] = '&'
+Char MxModeAudio[] = '$'
 (***********************************************************)
 (*              DATA TYPE DEFINITIONS GO BELOW             *)
 (***********************************************************)
@@ -94,7 +97,12 @@ PROJ_POWER1
 PROJ_POWER2
 PROJ_BUFFER1[10]
 PROJ_BUFFER2[10]
+char MATRIX_BUFFER[32]
 INTEGER DISPLAY
+
+widechar InStr[3]
+widechar OutStr[2]
+widechar Signal[7]
 (***********************************************************)
 (*               LATCHING DEFINITIONS GO BELOW             *)
 (***********************************************************)
@@ -113,6 +121,7 @@ DEFINE_MUTUALLY_EXCLUSIVE
 INCLUDE 'AMX_ArrayLib.axi'
 INCLUDE 'nAMX_QUEUE.axi'
 INCLUDE 'Biamp_Audia.axi'
+INCLUDE 'UnicodeLib.axi'
 
 DEFINE_CALL 'Proj Power'(integer Proj_Num, char Proj_Control[10]) //Projector Control Sub.
 {
@@ -163,40 +172,14 @@ DEFINE_CALL 'Proj Power'(integer Proj_Num, char Proj_Control[10]) //Projector Co
     }
 }
 
-DEFINE_CALL 'Proj Control'(integer Proj_Num, char Proj_Control[10]) //Projector Control Sub.
+DEFINE_CALL 'Matrix Tie'(integer MxIn, integer MxOut, Char MxAV[])
 {
-    LOCAL_VAR CHAR CMD
-    DISPLAY = Proj_Num
-    SELECT
-    {
-	ACTIVE(Proj_Control = 'VGA'):
-	{
-	    CMD = "'SOURCE 11',$0D"
-	}
-	ACTIVE(Proj_Control = 'BNC'): 
-	{
-	    CMD = "'SOURCE B1',$0D"
-	}
-	
-    }
-    SELECT
-    {
-	ACTIVE(Proj_Num = 1):
-	{
-	    SEND_STRING dvProjA,CMD
-	}
-	ACTIVE(Proj_Num = 2):
-	{
-	    SEND_STRING dvProjB,CMD
-	}
-	ACTIVE(Proj_Num = 3):
-	{
-	    SEND_STRING dvProjA,CMD
-	    SEND_STRING dvProjB,CMD
-	}
-    }
+    InStr = CH_TO_WC(FORMAT('%02d*',MxIn))
+    OutStr = CH_TO_WC(FORMAT('%02u',MxOut))
+    Signal = WC_CONCAT_STRING(InStr,WC_CONCAT_STRING(OutStr,CH_TO_WC(MxAV)))
+    
+    SEND_STRING dvMatrix,WC_TO_CH(Signal)
 }
-
 
 DEFINE_CALL 'System Off'
 {
@@ -211,6 +194,70 @@ DEFINE_CALL 'System Off'
     LeftProjPwrStatus = 0
     
 }
+
+DEFINE_CALL 'AUDIO_MUTE'(integer audio_channel) {
+    IF(uAudiaVol[audio_channel].nMute)
+	{
+          AUDIA_SetVolumeFn (audio_channel, AUDIA_VOL_MUTE_OFF)
+	}
+        ELSE
+	{
+          AUDIA_SetVolumeFn (audio_channel, AUDIA_VOL_MUTE)
+	}
+
+
+}
+DEFINE_CALL 'AUDIO_UP'(integer audio_channel) {
+    IF(uAudiaVol[audio_channel].nMute)
+	{
+          AUDIA_SetVolumeFn (audio_channel, AUDIA_VOL_MUTE_OFF)
+	}
+        ELSE
+	{
+          AUDIA_SetVolumeFn (audio_channel, AUDIA_VOL_UP)
+	}
+}
+
+DEFINE_CALL 'AUDIO_DOWN'(integer audio_channel) {
+    IF(uAudiaVol[audio_channel].nMute)
+	{
+          AUDIA_SetVolumeFn (audio_channel, AUDIA_VOL_MUTE_OFF)
+	}
+        ELSE
+	{
+          AUDIA_SetVolumeFn (audio_channel, AUDIA_VOL_DOWN)
+	}
+}
+DEFINE_CALL 'MUTE_STATE_CHANGE' (integer audio_channel, integer button_channel) {
+    IF(uAudiaVol[audio_channel].nMute){
+	MATRIX_BUFFER = "'^TXT-',ITOA(button_channel),',1&2,UNMUTE'"
+	SEND_COMMAND dvTp,MATRIX_BUFFER
+	SEND_COMMAND dvTp,"'^FON-',ITOA(button_channel),',1&2,37'" // 10 pt font
+	SEND_COMMAND dvTp,"'^BCF-',ITOA(button_channel),',1&2,VeryDarkRed'"
+    } ELSE {
+	MATRIX_BUFFER = "'^TXT-',ITOA(button_channel),',1&2,MUTE'"
+	SEND_COMMAND dvTp,MATRIX_BUFFER
+	SEND_COMMAND dvTp,"'^FON-',ITOA(button_channel),',1&2,36'" // 12 pt font
+	SEND_COMMAND dvTp,"'^BCF-',ITOA(button_channel),',1&2,Grey8'"
+    }
+}
+
+DEFINE_CALL 'AUDIO_START' {
+	    send_string dvAudia1,"'SET 2 INPMUTE 11 1 0',10" // 614 Computer L
+	    send_string dvAudia1,"'SET 2 INPMUTE 11 2 0',10" // 614 Coimputer R
+	    
+	    send_string dvAudia1,"'SET 2 INPMUTE 11 3 0',10" // 612 Computer L
+	    send_string dvAudia1,"'SET 2 INPMUTE 11 4 0',10" // 612 Computer R
+	    
+	    send_string dvAudia1,"'SET 2 INPMUTE 11 5 0',10" // 612 Computer L
+	    send_string dvAudia1,"'SET 2 INPMUTE 11 6 0',10" // 612 Computer R
+	    
+	    AUDIA_SetVolumeFn(19,AUDIA_VOL_MUTE) // Mute 612 Audio by default
+	    
+	    AUDIA_SetVolumeFn (1, AUDIA_VOL_MUTE_OFF)
+	    AUDIA_MatchVolumeLvl (2,1)      // Example: If this was a stereo pair
+	    AUDIA_MatchVolumeLvl (3,1)      // Example: If this was a stereo pair
+}
 (***********************************************************)
 (*                STARTUP CODE GOES BELOW                  *)
 (***********************************************************)
@@ -222,6 +269,7 @@ FOR (COUNT=0 ; COUNT<70 ; COUNT++)
     TimeArray[Count] = 1000
 }
 TIMELINE_CREATE(TL1, TimeArray, 61, TIMELINE_RELATIVE, TIMELINE_REPEAT) 
+
 (***********************************************************)
 (*                THE EVENTS GO BELOW                      *)
 (***********************************************************)
@@ -238,7 +286,19 @@ DATA_EVENT[dvAudia1]
 	    AUDIA_AssignVolumeParms (2, dvAUDIA1, 'SET 2 OUTLVL 12 2 ', 'SET 2 OUTMUTE 12 2 ', 0, 1120)
 	    AUDIA_AssignVolumeParms (3, dvAUDIA1, 'SET 2 OUTLVL 12 6 ', 'SET 2 OUTMUTE 12 6 ', 0, 1120)
 	    
+	    AUDIA_AssignVolumeParms (10, dvAUDIA1, 'SET 2 FDRLVL 10 1 ', 'SET 2 FDRMUTE 10 1 ', 820, 1120)
+	    AUDIA_AssignVolumeParms (17, dvAUDIA1, 'SET 2 FDRLVL 17 1 ', 'SET 2 FDRMUTE 17 1 ', 820, 1120)
+	    AUDIA_AssignVolumeParms (18, dvAUDIA1, 'SET 2 FDRLVL 18 1 ', 'SET 2 FDRMUTE 18 1 ', 820, 1120)
+	    AUDIA_AssignVolumeParms (19, dvAUDIA1, 'SET 2 FDRLVL 19 1 ', 'SET 2 FDRMUTE 19 1 ', 820, 1120)
+	    AUDIA_AssignVolumeParms (20, dvAUDIA1, 'SET 2 FDRLVL 20 1 ', 'SET 2 FDRMUTE 20 1 ', 820, 1120)
 	}
+    }
+}
+DATA_EVENT[dvMatrix]
+{
+    STRING:
+    {
+	MATRIX_BUFFER = DATA.TEXT
     }
 }
 (***********************************************************)
@@ -295,204 +355,64 @@ DATA_EVENT[dvProjB]
     }
 }
 
-BUTTON_EVENT[dvTp,nSrcSelects]
-{
-    Push:
-    {
-	
-	SWITCH(get_last(nSrcSelects))
-	{
-	    Case 1:
-	    {
-		nCurrentSource = nCam
-	    }
-	    
-	    Case 2:
-	    {
-		nCurrentSource = nPC
-	    }
-	}
-    }
-}
-
-BUTTON_EVENT[dvTp,nBtnDest]	//Select Left or Right Proj
-{
-    Push:
-    {
-	send_string 0:1:0,"'this is button.input ',itoa(get_last(nBtnDest)),13,10"
-	Switch (get_last(nBtnDest))
-	{
-	    Case 1:	//Left Proj
-	    {
-		IF(PROJ_POWER1 = 0)
-		{
-		    CALL 'Proj Power'(nLeft,'PON')
-		}
-		WAIT_UNTIL (RUN1 = 1)
-		{
-		    SWITCH (nCurrentSource)
-		    {
-			CASE nCam:
-			{
-			    
-			    Call 'Proj Control'(nLeft,'VGA')
-			    
-			    //Need to call the Nexia for audio
-			}
-			
-			Case nPC:
-			{
-			    Call 'Proj Control'(nLeft,'BNC')
-			    //Need to call the Nexia for audio
-			}
-		    }
-		}
-	    }
-	    Case 2:	//Right Proj
-	    {
-		IF(PROJ_POWER2 = 0)
-		{
-		    CALL 'Proj Power'(nRight,'PON')
-		}
-		WAIT_UNTIL (RUN2 = 1)
-		{
-		    SWITCH (nCurrentSource)
-		    {
-			CASE nCam:
-			{
-			    Call 'Proj Control'(nRight,'VGA')
-			    
-			    
-			}
-			
-			Case nPC:
-			{
-			    Call 'Proj Control'(nRight,'BNC')
-			}
-		    }
-		}
-	    }
-	    Case 3:	//Both Projectors
-	    {
-		IF(PROJ_POWER1 = 0)
-		{
-		    CALL 'Proj Power'(nLeft,'PON')
-		}
-		IF(PROJ_POWER2 = 0)
-		{
-		    CALL 'Proj Power'(nRight,'PON')
-		}
-		WAIT_UNTIL((RUN1 = 1) && (RUN2 = 1))
-		{
-		    SWITCH (nCurrentSource)
-		    {
-			CASE nCam:
-			{
-			    Call 'Proj Control'(3,'VGA')
-			    
-			}
-			
-			Case nPC:
-			{
-			    Call 'Proj Control'(3,'BNC')
-			}
-		    }
-		}
-	    }
-	}
-    }
-}
 BUTTON_EVENT[dvTp,nProjAdvance]
 {
     Push:
     {
         switch (get_last(nProjAdvance))
         {
-            Case 1:
-            {
-                Call 'Proj Power'(nRight,'PON')
-            }
-            Case 2:
-            {
-                Call 'Proj Power'(nRight,'POF')
-            }
-            Case 3:
+            Case 1: //Left Projector PC
             {
                 Call 'Proj Power'(nLeft,'PON')
+		Call 'Matrix Tie'(MxVinPC,MxVoutLProj,MxModeVideo)
             }
-            Case 4:
+            Case 2: //Left Projector Aux
             {
-                Call 'Proj Power'(nLeft,'POF')
+                Call 'Proj Power'(nLeft,'PON')
+		Call 'Matrix Tie'(MxVinAux,MxVoutLProj,MxModeVideo)
             }
-            
+            Case 3: //Left Projector Overflow Presentation
+            {
+                Call 'Proj Power'(nLeft,'PON')
+		Call 'Matrix Tie'(MxVin607A,MxVoutLProj,MxModeVideo)
+            }
+            Case 4: //Left Projector Overflow Camera
+            {
+                Call 'Proj Power'(nLeft,'PON')
+		Call 'Matrix Tie'(MxVin607B,MxVoutLProj,MxModeVideo)
+            }
+	    Case 5: //Left Projector Power Off
+	    {
+		Call 'Proj Power'(nLeft,'POF')
+	    }
+	    Case 6: //Right Projector PC
+	    {
+		Call 'Proj Power'(nRight,'PON')
+		Call 'Matrix Tie'(MxVinPC,MxVoutRProj,MxModeVideo)
+	    }
+	    Case 7: //Right Projector Aux
+            {
+                Call 'Proj Power'(nRight,'PON')
+		Call 'Matrix Tie'(MxVinAux,MxVoutRProj,MxModeVideo)
+            }
+            Case 8: //Right Projector Overflow Presentation
+            {
+                Call 'Proj Power'(nRight,'PON')
+		Call 'Matrix Tie'(MxVin607A,MxVoutRProj,MxModeVideo)
+            }
+            Case 9: //Right Projector Overflow Camera
+            {
+                Call 'Proj Power'(nRight,'PON')
+		Call 'Matrix Tie'(MxVin607B,MxVoutRProj,MxModeVideo)
+            }
+	    Case 10: //Right Projector Power Off
+	    {
+		Call 'Proj Power'(nRight,'POF')
+	    }
         }
     }
 }
 
-/*BUTTON_EVENT[dvTp,nBtnLeftProjAdvance]	//99 - 103
-{
-    Push:
-    {
-	//SEND_STRING 0:1:0,"'This button does not switch the Scaler',13,10"
-	SWITCH(get_last(nBtnLeftProjAdvance))
-	{
-	    Case 1:	//Power On
-	    {
-		Call 'Proj Power'(nLeft,'PON')
-		
-	    }
-	    Case 2:	//Power Off
-	    {
-		Call 'Proj Power'(nLeft,'POF')
-		
-	    }
-	    Case 3:	//VCR Input	
-	    {
-		//Call 'Proj Control'(nLeft,'RGB1')
-	    }
-	    Case 4:	//DVD Input
-	    {
-		//Call 'Proj Control'(nLeft,'RGB1')
-	    }
-	    Case 5:	//PC Input
-	    {	
-		//Call 'Proj Control'(nLeft,'RGB2')
-	    }
-	}
-    }
-}*/
-/*BUTTON_EVENT[dvTp,nBtnRightProjAdvance]	//94 - 98
-{
-    Push:
-    {
-	//SEND_STRING 0:1:0,"'This button does not switch the Scaler',13,10"
-	SWITCH(get_last(nBtnRightProjAdvance))
-	{
-	    Case 1:	//Power On
-	    {
-		Call 'Proj Power'(nRight,'PON')
-		RightProjPwrStatus =1
-	    }
-	    Case 2:	//Power Off
-	    {
-		Call 'Proj Power'(nRight,'POF')
-		RightProjPwrStatus = 0
-	    }
-	    Case 3:	//VCR Input	
-	    {
-		//Call 'Proj Control'(nRight,'RGB1')
-	    }
-	    Case 4:	//DVD Input
-	    {
-		//Call 'Proj Control'(nRight,'RGB1')
-	    }
-	    Case 5:	//PC Input
-	    {	
-		//Call 'Proj Control'(nRight,'RGB2')
-	    }
-	}
-    }
-}*/
 BUTTON_EVENT[dvTp,nBtnPwrOff]
 {
     Push:
@@ -500,144 +420,200 @@ BUTTON_EVENT[dvTp,nBtnPwrOff]
 	Call 'System Off'
     }
 }
-BUTTON_EVENT[dvTp,204]        // Vol Up
-BUTTON_EVENT[dvTp,205]        // Vol Down
-BUTTON_EVENT[dvTp,206]        // Vol Mute
+
+BUTTON_EVENT[dvTp,204]        // Mic Vol Up
 {
-  PUSH :
-  { 
-    STACK_VAR INTEGER nVolChn
-    nVolChn = 1
-    SWITCH(BUTTON.INPUT.CHANNEL)
-    {
-      CASE 204 :    // Vol Up
-      {
-        IF(uAudiaVol[nVolChn].nMute)
-          AUDIA_SetVolumeFn (nVolChn, AUDIA_VOL_MUTE_OFF)
-        ELSE
-          AUDIA_SetVolumeFn (nVolChn, AUDIA_VOL_UP)
-      }
-      CASE 205 :    // Vol Down
-      {
-        IF(uAudiaVol[nVolChn].nMute)
-          AUDIA_SetVolumeFn (nVolChn, AUDIA_VOL_MUTE_OFF)
-        ELSE
-          AUDIA_SetVolumeFn (nVolChn, AUDIA_VOL_DOWN)
-      }
-      CASE 206 :    // Vol Mute
-      {
-        IF(uAudiaVol[nVolChn].nMute)
-          AUDIA_SetVolumeFn (nVolChn, AUDIA_VOL_MUTE_OFF)
-        ELSE
-          AUDIA_SetVolumeFn (nVolChn, AUDIA_VOL_MUTE)
-      }
+    PUSH :
+    { 
+	STACK_VAR INTEGER audio_channel 
+	audio_channel = 10
+	Call 'AUDIO_UP'(audio_channel)
+	SEND_LEVEL dvTp,1,AUDIA_GetBgLvl(audio_channel)
+	Call 'MUTE_STATE_CHANGE'(audio_channel,206)
     }
-
-    AUDIA_MatchVolumeLvl (3,2)      // Example: If this was a stereo pair
-  }
-  RELEASE :
-  {
-    STACK_VAR INTEGER nVolChn
-
-    nVolChn = 1
-    AUDIA_SetVolumeFn (nVolChn, AUDIA_VOL_STOP)
-  }
-  HOLD[3,REPEAT] :
-  {
-    STACK_VAR INTEGER nVolChn
-
-    nVolChn = 1
-    SWITCH(BUTTON.INPUT.CHANNEL)
-    {
-      CASE 204 :    // Vol Up
-      {
-        AUDIA_SetVolumeFn (nVolChn, AUDIA_VOL_UP)
-      }
-      CASE 205 :    // Vol Down
-      {
-        AUDIA_SetVolumeFn (nVolChn, AUDIA_VOL_DOWN)
-      }
+}
+BUTTON_EVENT[dvTp,205]        // Mic Vol Down
+{
+    PUSH :
+    { 
+	STACK_VAR INTEGER audio_channel 
+	audio_channel = 10
+	Call 'AUDIO_DOWN'(audio_channel)
+	SEND_LEVEL dvTp,1,AUDIA_GetBgLvl(audio_channel)
+	Call 'MUTE_STATE_CHANGE'(audio_channel,206)
     }
-
-//    AUDIA_MatchVolumeLvl (2,1)      // Example: If this was a stereo pair
-  }
+}
+BUTTON_EVENT[dvTp,206]        // Mic Vol Mute
+{
+    PUSH :
+    { 
+	STACK_VAR INTEGER audio_channel 
+	audio_channel = 10
+	Call 'AUDIO_MUTE'(audio_channel)
+	SEND_LEVEL dvTp,1,AUDIA_GetBgLvl(audio_channel)
+	Call 'MUTE_STATE_CHANGE'(audio_channel,206)
+    }
 }
 
-
-BUTTON_EVENT[dvTp,214]        // Vol Up
-BUTTON_EVENT[dvTp,215]        // Vol Down
-BUTTON_EVENT[dvTp,216]        // Vol Mute
+BUTTON_EVENT[dvTp,214]        // Master Vol Up
 {
-  PUSH :
-  { 
-    STACK_VAR INTEGER nVolChn
-    nVolChn = 1
-    SWITCH(BUTTON.INPUT.CHANNEL)
-    {
-      CASE 214 :    // Vol Up
-      {
-        IF(uAudiaVol[nVolChn].nMute)
-          AUDIA_SetVolumeFn (nVolChn, AUDIA_VOL_MUTE_OFF)
-        ELSE
-          AUDIA_SetVolumeFn (nVolChn, AUDIA_VOL_UP)
-      }
-      CASE 215 :    // Vol Down
-      {
-        IF(uAudiaVol[nVolChn].nMute)
-          AUDIA_SetVolumeFn (nVolChn, AUDIA_VOL_MUTE_OFF)
-        ELSE
-          AUDIA_SetVolumeFn (nVolChn, AUDIA_VOL_DOWN)
-      }
-      CASE 216 :    // Vol Mute
-      {
-        IF(uAudiaVol[nVolChn].nMute)
-          AUDIA_SetVolumeFn (nVolChn, AUDIA_VOL_MUTE_OFF)
-        ELSE
-          AUDIA_SetVolumeFn (nVolChn, AUDIA_VOL_MUTE)
-      }
+    PUSH :
+    { 
+	STACK_VAR INTEGER audio_channel 
+	audio_channel = 20
+	Call 'AUDIO_UP'(audio_channel)
+	SEND_LEVEL dvTp,2,AUDIA_GetBgLvl(audio_channel)
+	Call 'MUTE_STATE_CHANGE'(audio_channel,216)
     }
-
-    AUDIA_MatchVolumeLvl (2,1)      // Example: If this was a stereo pair
-    AUDIA_MatchVolumeLvl (3,1)      // Example: If this was a stereo pair
-  }
-  RELEASE :
-  {
-    STACK_VAR INTEGER nVolChn
-
-    nVolChn = 1
-    AUDIA_SetVolumeFn (nVolChn, AUDIA_VOL_STOP)
-  }
-  HOLD[3,REPEAT] :
-  {
-    STACK_VAR INTEGER nVolChn
-
-    nVolChn = 1
-    SWITCH(BUTTON.INPUT.CHANNEL)
-    {
-      CASE 214 :    // Vol Up
-      {
-        AUDIA_SetVolumeFn (nVolChn, AUDIA_VOL_UP)
-      }
-      CASE 215 :    // Vol Down
-      {
-        AUDIA_SetVolumeFn (nVolChn, AUDIA_VOL_DOWN)
-      }
-    }
-
-    AUDIA_MatchVolumeLvl (2,1)      // Example: If this was a stereo pair
-    AUDIA_MatchVolumeLvl (3,1)      // Example: If this was a stereo pair
-  }
 }
+BUTTON_EVENT[dvTp,215]        // Master Vol Down
+{
+    PUSH :
+    { 
+	STACK_VAR INTEGER audio_channel 
+	audio_channel = 20
+	Call 'AUDIO_DOWN'(audio_channel)
+	SEND_LEVEL dvTp,2,AUDIA_GetBgLvl(audio_channel)
+	Call 'MUTE_STATE_CHANGE'(audio_channel,216)
+    }
+}
+BUTTON_EVENT[dvTp,216]        // Master Vol Mute
+{
+    PUSH :
+    { 
+	STACK_VAR INTEGER audio_channel 
+	audio_channel = 20
+	Call 'AUDIO_MUTE'(audio_channel)
+	SEND_LEVEL dvTp,2,AUDIA_GetBgLvl(audio_channel)
+	Call 'MUTE_STATE_CHANGE'(audio_channel,216)
+    }
+}
+
+BUTTON_EVENT[dvTp,224]        // PC Vol Up
+{
+    PUSH :
+    { 
+	STACK_VAR INTEGER audio_channel 
+	audio_channel = 17
+	Call 'AUDIO_UP'(audio_channel)
+	SEND_LEVEL dvTp,3,AUDIA_GetBgLvl(audio_channel)
+	Call 'MUTE_STATE_CHANGE'(audio_channel,226)
+    }
+}
+BUTTON_EVENT[dvTp,225]        // PC Vol Down
+{
+    PUSH :
+    { 
+	STACK_VAR INTEGER audio_channel 
+	audio_channel = 17
+	Call 'AUDIO_DOWN'(audio_channel)
+	SEND_LEVEL dvTp,3,AUDIA_GetBgLvl(audio_channel)
+	Call 'MUTE_STATE_CHANGE'(audio_channel,226)
+    }
+}
+BUTTON_EVENT[dvTp,226]        // PC Vol Mute
+{
+    PUSH :
+    { 
+	STACK_VAR INTEGER audio_channel 
+	audio_channel = 17
+	Call 'AUDIO_MUTE'(audio_channel)
+	SEND_LEVEL dvTp,3,AUDIA_GetBgLvl(audio_channel)
+	Call 'MUTE_STATE_CHANGE'(audio_channel,226)
+    }
+}
+
+BUTTON_EVENT[dvTp,234]        // Aux Vol Up
+{
+    PUSH :
+    { 
+	STACK_VAR INTEGER audio_channel 
+	audio_channel = 18
+	Call 'AUDIO_UP'(audio_channel)
+	SEND_LEVEL dvTp,4,AUDIA_GetBgLvl(audio_channel)
+	Call 'MUTE_STATE_CHANGE'(audio_channel,236)
+    }
+}
+BUTTON_EVENT[dvTp,235]        // Aux Vol Down
+{
+    PUSH :
+    { 
+	STACK_VAR INTEGER audio_channel 
+	audio_channel = 18
+	Call 'AUDIO_DOWN'(audio_channel)
+	SEND_LEVEL dvTp,4,AUDIA_GetBgLvl(audio_channel)
+	Call 'MUTE_STATE_CHANGE'(audio_channel,236)
+    }
+}
+BUTTON_EVENT[dvTp,236]        // Aux Vol Mute
+{
+    PUSH :
+    { 
+	STACK_VAR INTEGER audio_channel 
+	audio_channel = 18
+	Call 'AUDIO_MUTE'(audio_channel)
+	SEND_LEVEL dvTp,4,AUDIA_GetBgLvl(audio_channel)
+	Call 'MUTE_STATE_CHANGE'(audio_channel,236)
+    }
+}
+
+BUTTON_EVENT[dvTp,244]        // 612 Vol Up
+{
+    PUSH :
+    { 
+	STACK_VAR INTEGER audio_channel 
+	audio_channel = 19
+	Call 'AUDIO_UP'(audio_channel)
+	SEND_LEVEL dvTp,5,AUDIA_GetBgLvl(audio_channel)
+	Call 'MUTE_STATE_CHANGE'(audio_channel,246)
+    }
+}
+BUTTON_EVENT[dvTp,245]        // 612 Vol Down
+{
+    PUSH :
+    { 
+	STACK_VAR INTEGER audio_channel 
+	audio_channel = 19
+	Call 'AUDIO_DOWN'(audio_channel)
+	SEND_LEVEL dvTp,5,AUDIA_GetBgLvl(audio_channel)
+	Call 'MUTE_STATE_CHANGE'(audio_channel,246)
+    }
+}
+BUTTON_EVENT[dvTp,246]        // 612 Vol Mute
+{
+    PUSH :
+    { 
+	STACK_VAR INTEGER audio_channel 
+	audio_channel = 19
+	Call 'AUDIO_MUTE'(audio_channel)
+	SEND_LEVEL dvTp,5,AUDIA_GetBgLvl(audio_channel)
+	Call 'MUTE_STATE_CHANGE'(audio_channel,246)
+    }
+}
+
 BUTTON_EVENT[dvTp,8]        //This is on the Splash page. Basically a big translucent button.
 {
     Push:
     {
         On[Relay,PowerRelay]
-         
+	Call 'AUDIO_START'
+	Call 'MUTE_STATE_CHANGE'(10,206)
+	Call 'MUTE_STATE_CHANGE'(20,216)
+	Call 'MUTE_STATE_CHANGE'(17,226)
+	Call 'MUTE_STATE_CHANGE'(18,236)
+	Call 'MUTE_STATE_CHANGE'(19,246)
+    }
+}
+BUTTON_EVENT[dvTp,6]	//Stop the Shutdown sequence.
+{
+    Push:
+    {
+	TIMELINE_KILL(Tl1)
+	SEND_COMMAND dvTp,"'PPOF-Shutdown Warning'"
     }
 }
 DEFINE_PROGRAM
-If((time_to_hour(time) = 21)&&(time_to_minute(time) = 00)&&(nTimeBlock = 0))
+If((time_to_hour(time) = 22)&&(time_to_minute(time) = 00)&&(nTimeBlock = 0))
 {
     send_string 0:1:0,"'the time is ',time,13,10"
     nTimeBlock = 1		//Keeps this from running over and over for the whole minute.
@@ -646,11 +622,15 @@ If((time_to_hour(time) = 21)&&(time_to_minute(time) = 00)&&(nTimeBlock = 0))
 	nTimeBlock = 0	
 }
 
-SEND_LEVEL dvTp,1,AUDIA_GetBgLvl(1)
-SEND_LEVEL dvTp,2,AUDIA_GetBgLvl(2) 
-[dvTp,214] = (uAudiaVol[1].nVolRamp = AUDIA_VOL_UP)
-[dvTp,215] = (uAudiaVol[1].nVolRamp = AUDIA_VOL_DOWN)
-[dvTp,216] = (uAudiaVol[1].nMute)
+SEND_LEVEL dvTp,1,AUDIA_GetBgLvl(10)
+SEND_LEVEL dvTp,3,AUDIA_GetBgLvl(17)
+SEND_LEVEL dvTp,4,AUDIA_GetBgLvl(18)
+SEND_LEVEL dvTp,5,AUDIA_GetBgLvl(19)
+SEND_LEVEL dvTp,2,AUDIA_GetBgLvl(20)
+
+//[dvTp,214] = (uAudiaVol[1].nVolRamp = AUDIA_VOL_UP)
+//[dvTp,215] = (uAudiaVol[1].nVolRamp = AUDIA_VOL_DOWN)
+//[dvTp,216] = (uAudiaVol[1].nMute)
 
 (***********************************************************)
 (*                     END OF PROGRAM                      *)
