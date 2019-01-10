@@ -66,11 +66,17 @@ integer nBtnPwrOff[] =
 
 integer MxVinPC = 1
 integer MxVinAux = 2
-integer MxVin607A = 3
-integer MxVin607B = 4
+integer MxVinCam = 3
+integer MxVin607Pres = 4
+integer MxVin607Cam = 5
 
 integer MxVoutLProj = 1
 integer MxVoutRProj = 2
+integer MxVoutEchoPres = 3
+integer MxVoutEchoCam = 4
+
+integer MxAoutPC = 1
+integer MxAoutAux = 2
 
 Char MxModeBoth[] = '!'
 Char MxModeVideo[] = '&'
@@ -174,10 +180,11 @@ DEFINE_CALL 'Proj Power'(integer Proj_Num, char Proj_Control[10]) //Projector Co
 
 DEFINE_CALL 'Matrix Tie'(integer MxIn, integer MxOut, Char MxAV[])
 {
-    InStr = CH_TO_WC(FORMAT('%02d*',MxIn))
-    OutStr = CH_TO_WC(FORMAT('%02u',MxOut))
+    InStr = CH_TO_WC(FORMAT('%01d*',MxIn))
+    OutStr = CH_TO_WC(FORMAT('%01u',MxOut))
     Signal = WC_CONCAT_STRING(InStr,WC_CONCAT_STRING(OutStr,CH_TO_WC(MxAV)))
     
+    SEND_STRING 0, "'Tieing ',MxIn,' to ',MxOut"
     SEND_STRING dvMatrix,WC_TO_CH(Signal)
 }
 
@@ -257,6 +264,12 @@ DEFINE_CALL 'AUDIO_START' {
 	    AUDIA_SetVolumeFn (1, AUDIA_VOL_MUTE_OFF)
 	    AUDIA_MatchVolumeLvl (2,1)      // Example: If this was a stereo pair
 	    AUDIA_MatchVolumeLvl (3,1)      // Example: If this was a stereo pair
+	    
+	    Call'Matrix Tie'(MxVinPC,MxAoutPC,MxModeAudio)
+	    Call'Matrix Tie'(MxVinAux,MxAoutAux,MxModeAudio)
+	    
+	    CALL'Matrix Tie'(MxVinPC,MxVoutEchoPres,MxModeVideo)
+	    Call'Matrix Tie'(MxVinCam,MxVoutEchoCam,MxModeVideo)
 }
 (***********************************************************)
 (*                STARTUP CODE GOES BELOW                  *)
@@ -374,12 +387,12 @@ BUTTON_EVENT[dvTp,nProjAdvance]
             Case 3: //Left Projector Overflow Presentation
             {
                 Call 'Proj Power'(nLeft,'PON')
-		Call 'Matrix Tie'(MxVin607A,MxVoutLProj,MxModeVideo)
+		Call 'Matrix Tie'(MxVin607Pres,MxVoutLProj,MxModeVideo)
             }
             Case 4: //Left Projector Overflow Camera
             {
                 Call 'Proj Power'(nLeft,'PON')
-		Call 'Matrix Tie'(MxVin607B,MxVoutLProj,MxModeVideo)
+		Call 'Matrix Tie'(MxVin607Cam,MxVoutLProj,MxModeVideo)
             }
 	    Case 5: //Left Projector Power Off
 	    {
@@ -389,21 +402,23 @@ BUTTON_EVENT[dvTp,nProjAdvance]
 	    {
 		Call 'Proj Power'(nRight,'PON')
 		Call 'Matrix Tie'(MxVinPC,MxVoutRProj,MxModeVideo)
+		Call 'Matrix Tie'(MxVinPC,MxVoutEchoPres,MxModeVideo)
 	    }
 	    Case 7: //Right Projector Aux
             {
                 Call 'Proj Power'(nRight,'PON')
 		Call 'Matrix Tie'(MxVinAux,MxVoutRProj,MxModeVideo)
+		Call 'Matrix Tie'(MxVinAux,MxVoutEchoPres,MxModeVideo)
             }
             Case 8: //Right Projector Overflow Presentation
             {
                 Call 'Proj Power'(nRight,'PON')
-		Call 'Matrix Tie'(MxVin607A,MxVoutRProj,MxModeVideo)
+		Call 'Matrix Tie'(MxVin607Pres,MxVoutRProj,MxModeVideo)
             }
             Case 9: //Right Projector Overflow Camera
             {
                 Call 'Proj Power'(nRight,'PON')
-		Call 'Matrix Tie'(MxVin607B,MxVoutRProj,MxModeVideo)
+		Call 'Matrix Tie'(MxVin607Cam,MxVoutRProj,MxModeVideo)
             }
 	    Case 10: //Right Projector Power Off
 	    {

@@ -125,7 +125,7 @@
 <SysID>3</SysID>
 <TransTCPIP>192.168.1.113:1319:1:607AV::</TransTCPIP>
 <TransSerial>COM1,115200,8,None,1,None</TransSerial>
-<TransTCPIPEx>192.168.1.113|1319|1|607AV||</TransTCPIPEx>
+<TransTCPIPEx>172.16.40.34|1319|1|607 AMX Master||</TransTCPIPEx>
 <TransSerialEx>COM1|115200|8|None|1|None||</TransSerialEx>
 <TransUSBEx>|||||</TransUSBEx>
 <TransVNMEx>10.0.0.1|1|&lt;Default&gt;</TransVNMEx>
